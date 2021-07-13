@@ -1,0 +1,68 @@
+--- 
+- hosts: idrachosts
+  connection: local
+  gather_facts: false
+  name: Booting to Network Operating System image
+
+  collections:
+    - dellemc.openmanage
+
+  tasks:
+    - include_vars: vars.yaml
+
+    - name: Ansible create directory and set permissions    
+      file:
+        path: "{{ item }}"
+        state: directory
+        mode: "u=rw,g=rw,o=rw"   
+      with_items:
+       - 'hostimages/staging/{{ host_hostname }}'
+       - 'hostimages/isomount'
+       - name: Extract kernel and ramdisk from a LiveCD
+    iso_extract:
+      image: '{{ vars_src_iso }}''
+      dest: 'hostimages/staging/{{ host_hostname }}'
+      files:
+      - isolinux/kernel
+      - isolinux/initrd.cgz
+    #   shell: |
+    #     mkdir /ksiso/{{ server_hostname }}
+    #     mount -o loop -t iso9660 {{ vars_src_iso }} /ksiso/{{ server_hostname }}/
+    #     mkdir /ksimage/staging/{{ server_hostname }}
+    #     cp -r /ksiso/{{ server_hostname }}/* /ksimage/staging/{{ server_hostname }}/
+    #     chmod 777 /ksimage/staging/*
+    #     umount /ksiso/{{ server_hostname }}
+    #     sed -e 's+cdromBoot+ks=cdrom:/KS_CUST.CFG+g' -i $(find /ksimage/staging/{{ server_hostname }}/ -type f -name 'boot.cfg') 
+
+    # - name: Creating kickstart file with proper automation contents . . .
+    #   copy:
+    #     force: true
+    #     dest: /ksimage/staging/{{ server_hostname }}/KS_CUST.CFG
+    #     content: |
+    #       vmaccepteula
+    #       rootpw {{ server_rootpassword }}
+    #       install --firstdisk --overwritevmfs
+    #       network --bootproto=static --vlanid={{ server_vlan }} --ip={{ server_ipv4 }} --netmask={{ server_netmask }} --gateway={{ server_gateway }} --nameserver={{ vars_nameserver }} --hostname={{ server_hostname }}
+    #       reboot
+          
+    # - name: Creating bootable iso from all files . . .
+    #   shell: >
+    #     mkisofs
+    #     -relaxed-filenames
+    #     -J
+    #     -R
+    #     -b isolinux.bin
+    #     -c boot.cat
+    #     -no-emul-boot
+    #     -boot-load-size 4
+    #     -boot-info-table
+    #     -eltorito-alt-boot
+    #     -e efiboot.img
+    #     -boot-load-size 1
+    #     -no-emul-boot
+    #     -o /ksimage/staging/{{ server_hostname }}.iso
+    #     /ksimage/staging/{{ server_hostname }}/
+  
+    # - name: Moving created iso to webserver . . .
+    #   shell: |
+    #     mv /ksimage/staging/{{ server_hostname }}.iso /ksimage/done

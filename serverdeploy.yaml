@@ -1,0 +1,68 @@
+--- 
+- hosts: idrachosts
+  connection: local
+  gather_facts: false
+  name: Booting to Network Operating System image
+#sup
+  collections:
+    - dellemc.openmanage
+
+  tasks: 
+    - include_vars: vars.yaml
+    - name:
+      debug:
+        msg: "{{ idrac_password }}"
+
+    - name: Check LC Ready Status
+      idrac_lifecycle_controller_status_info:
+        idrac_ip:   "{{ host_idrac_ip }}"
+        idrac_user: "{{ idrac_username }}"
+        idrac_password:  "{{ idrac_password }}"
+      register: lcresult
+    - name:
+      debug:
+        msg: "{{ lcresult.lc_status_info.LCReady }}"
+
+    - name: Reset iDRAC if LCM NOT READY
+      idrac_reset:
+         idrac_ip:   "{{ host_idrac_ip }}"
+         idrac_user: "{{ idrac_username }}"
+         idrac_password:  "{{ idrac_password }}"
+      # register: result
+      # failed_when: result is changed
+      when: lcresult.lc_status_info.LCReady == false
+      
+    - name: Wait for port 443 to become open on the host
+      wait_for:
+         host: "{{ host_idrac_ip }}"
+         port: 443
+         delay: 30
+         connect_timeout: 5
+         timeout: 500
+      register: result
+      failed_when: result.elapsed < 20
+      when: lcresult.lc_status_info.LCReady == false
+      
+    - name: Check LC Ready Status again
+      idrac_lifecycle_controller_status_info:
+        idrac_ip:   "{{ host_idrac_ip }}"
+        idrac_user: "{{ idrac_username }}"
+        idrac_password:  "{{ idrac_password }}"
+      register: result
+      until: result.lc_status_info.LCReady == true
+      retries: 30
+      delay: 10
+
+    - name: "Boot to OS installer"
+      idrac_os_deployment:
+        idrac_ip: "{{ host_idrac_ip }}"
+        idrac_password: "{{ idrac_password }}"
+        idrac_user: "{{ idrac_username }}"
+        share_name: "{{ vars_share_name }}"
+        iso_image: "{{ vars_iso_image }}"
+        #share_name: "192.168.200.244:/ksimage/done"
+        #iso_image: "esx01.iso"        
+        expose_duration: 180
+
+      tags:
+        - network_iso

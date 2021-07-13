@@ -1,0 +1,22 @@
+--- 
+- hosts: idrachosts
+  connection: local
+  gather_facts: false
+  name: Booting to Network Operating System image
+
+  collections:
+    - dellemc.openmanage
+
+  tasks:
+    - include_vars: vars.yaml
+
+    - name:
+      debug:
+        msg:
+          - "host_idrac_ip = {{ host_idrac_ip }}"
+          - "host_hostname = {{ host_hostname }}"
+          - "host_ipv4 = {{ host_ipv4 }}"
+          - "host_netmask = {{ host_netmask }}"
+          - "host_vlan = {{ host_vlan }}"
+          - "host_gateway = {{ host_gateway }}"
+          - "idrac_password = {{ idrac_password }}"
